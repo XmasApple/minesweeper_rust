@@ -1,15 +1,17 @@
+extern crate colored;
+use colored::*;
 use console::{Key, Term};
 use rand::seq::SliceRandom;
 use std::cmp;
 use std::io;
 
-#[derive(Debug)]
+//#[derive(Debug)]
 struct Cursor {
     x: usize,
     y: usize,
 }
 
-const CLOSED: char = '#';
+const CLOSED: char = '-';
 
 fn main() {
     let field_size = read_int("Please enter game field size.");
@@ -54,10 +56,22 @@ fn main() {
                 Key::Char('f') => {
                     let current = &mut field[cursor.y * field_size + cursor.x];
                     *current = match *current {
-                        CLOSED => 'f',
-                        'f' => CLOSED,
-                        '*' => 'F',
-                        'F' => '*',
+                        CLOSED => {
+                            mines_count -= 1;
+                            'f'
+                        }
+                        'f' => {
+                            mines_count += 1;
+                            CLOSED
+                        }
+                        '*' => {
+                            mines_count -= 1;
+                            'F'
+                        }
+                        'F' => {
+                            mines_count += 1;
+                            '*'
+                        }
                         _ => 'E',
                     }
                 }
@@ -75,15 +89,23 @@ fn draw(field: &Vec<char>, field_size: &usize, mines_count: &usize, cursor: &Cur
                 'o'
             } else {
                 let char = field[y * field_size + x];
-                if char == '*' && closed {
-                    CLOSED
-                } else if char == 'F' {
-                    'f'
+                if char == '*' {
+                    if closed {
+                        CLOSED
+                    } else {
+                        print!("{} ", "*".red());
+                        continue;
+                    }
+                } else if char == 'f' || char == 'F' {
+                    print!("{} ", "F".on_red());
+                    continue;
+                } else if char == '0' {
+                    ' '
                 } else {
                     char
                 }
             };
-            print!("{char}");
+            print!("{char} ");
         }
         println!();
     }
@@ -113,22 +135,23 @@ fn open(
     cursor: &Cursor,
     by_player: bool,
 ) -> bool {
-    println!("{:?}", cursor);
+    //println!("{:?}", cursor);
     if field[cursor.y * field_size + cursor.x] == '*' {
         return false;
     }
     let (xmin, xmax) = (
         if cursor.x == 0 { 0 } else { cursor.x - 1 },
-        cmp::min(*field_size, cursor.x + 1),
+        cmp::min(*field_size, cursor.x + 2),
     );
     let (ymin, ymax) = (
         if cursor.y == 0 { 0 } else { cursor.y - 1 },
-        cmp::min(*field_size, cursor.y + 1),
+        cmp::min(*field_size, cursor.y + 2),
     );
     let mut mines = 0;
     let mut flags = 0;
-    for x in xmin..xmax + 1 {
-        for y in ymin..ymax + 1 {
+    for x in xmin..xmax {
+        for y in ymin..ymax {
+            //println!("{x}:{y}");
             if x == cursor.x && y == cursor.y {
                 continue;
             }
@@ -156,8 +179,8 @@ fn open(
     }
     field[cursor.y * field_size + cursor.x] = char::from_digit(mines + flags, 10).unwrap();
     if mines == 0 {
-        for x in xmin..xmax + 1 {
-            for y in ymin..ymax + 1 {
+        for x in xmin..xmax {
+            for y in ymin..ymax {
                 if x == cursor.x && y == cursor.y || field[y * field_size + x] != CLOSED {
                     continue;
                 }
@@ -172,15 +195,15 @@ fn gen_field(field_size: &usize, mines_count: &mut usize, field: &mut Vec<char>,
     let mut indices = (0..field_size * field_size).collect::<Vec<usize>>();
     let (xmin, xmax) = (
         if cursor.x == 0 { 0 } else { cursor.x - 1 },
-        cmp::min(*field_size, cursor.x + 1),
+        cmp::min(*field_size, cursor.x + 2),
     );
     let (ymin, ymax) = (
         if cursor.y == 0 { 0 } else { cursor.y - 1 },
-        cmp::min(*field_size, cursor.y + 1),
+        cmp::min(*field_size, cursor.y + 2),
     );
     //println!("{xmin} {xmax} {ymin} {ymax}");
-    for x in xmin..xmax + 1 {
-        for y in ymin..ymax + 1 {
+    for x in xmin..xmax {
+        for y in ymin..ymax {
             //println!("{x}:{y}");
             let index = indices
                 .iter()

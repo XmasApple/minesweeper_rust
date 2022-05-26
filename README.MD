@@ -1,3 +1,3 @@
 # Minesweeper
 
-my first rust projetct
+My first rust project.
