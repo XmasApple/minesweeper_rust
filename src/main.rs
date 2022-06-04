@@ -174,13 +174,15 @@ impl Game {
 
     fn open(&mut self, cursor: &Cursor, by_user: bool) {
         let field_size = self.field_size;
+        let field = &mut self.field;
+        let current = &mut field[cursor.y * field_size + cursor.x];
 
-        if self.field[cursor.y * field_size + cursor.x].mine {
+        if current.mine {
             self.state = GameState::Lose;
             return;
         }
-        if self.field[cursor.y * field_size + cursor.x].state == CellState::Closed {
-            (&mut self.field[cursor.y * field_size + cursor.x]).state = CellState::Open;
+        if current.state == CellState::Closed {
+            current.state = CellState::Open;
         }
 
         let (xmin, xmax) = (
@@ -198,26 +200,32 @@ impl Game {
                 if x == cursor.x && y == cursor.y {
                     continue;
                 }
-                if self.field[y * field_size + x].state == CellState::Flag {
+                if field[y * field_size + x].state == CellState::Flag {
                     flags += 1;
                 }
             }
         }
-        if (self.field[cursor.y * field_size + cursor.x].neighbors == flags && by_user)
-            || self.field[cursor.y * field_size + cursor.x].neighbors == 0
-        {
+
+        let current = &mut field[cursor.y * field_size + cursor.x];
+
+        let mut queue: Vec<(usize, usize)> = Vec::new();
+        if (current.neighbors == flags && by_user) || current.neighbors == 0 {
             for x in xmin..xmax {
                 for y in ymin..ymax {
                     if x == cursor.x && y == cursor.y
-                        || self.field[y * field_size + x].state != CellState::Closed
+                        || field[y * field_size + x].state != CellState::Closed
                     {
                         continue;
                     } else {
-                        self.open(&Cursor { x, y }, false);
+                        queue.push((x, y));
                     }
                 }
             }
         }
+        for (x, y) in queue {
+            self.open(&Cursor { x, y }, false);
+        }
+
         if self
             .field
             .iter()
