@@ -78,7 +78,7 @@ impl Game {
             }
         }
 
-        println!("{indices:?}");
+        //println!("{indices:?}");
         if mine_count > indices.len() {
             self.mine_count = indices.len()
         }
@@ -93,7 +93,7 @@ impl Game {
         }
         println!("{mines_indices:?}");
 
-        println!("{self:?}");
+        //println!("{self:?}");
         for x in 0..field_size {
             for y in 0..field_size {
                 let (xmin, xmax) = (if x == 0 { 0 } else { x - 1 }, cmp::min(field_size, x + 2));
@@ -119,44 +119,38 @@ impl Game {
         print!("{esc}[2J{esc}[1;1H", esc = 27 as char); //position the cursor at row 1, column 1:
         for y in 0..field_size {
             for x in 0..field_size {
-                let char = if x == cursor.x && y == cursor.y {
-                    'o'
-                } else {
+                let symbol :ColoredString = {
                     let cell = &self.field[y * field_size + x];
                     match cell.state {
                         CellState::Closed => {
                             if cell.mine {
                                 if self.state == GameState::Lose {
-                                    print!("{} ", "*".red());
-                                    continue;
+                                    "*".red()
                                 }
-                                if self.state == GameState::Win {
-                                    print!("{} ", "*".red().on_white());
-                                    continue;
+                                else if self.state == GameState::Win {
+                                    "*".red().on_white()
+                                } else {
+                                    CLOSED.white().clear()
                                 }
-                                CLOSED
                             } else {
-                                CLOSED
+                                CLOSED.white().clear()
                             }
                         }
                         CellState::Open => {
                             if cell.mine {
-                                print!("{} ", "*".black().on_red());
-                                continue;
+                                "*".black().on_red()
                             } else if cell.neighbors == 0 {
-                                ' '
+                                " ".clear()
                             } else {
-                                char::from_digit(cell.neighbors.try_into().unwrap(), 10)
-                                    .unwrap_or('E')
+                                cell.neighbors.to_string().white().clear()
                             }
                         }
                         CellState::Flag => {
-                            print!("{} ", "F".on_red());
-                            continue;
+                            "F".on_red()
                         }
                     }
                 };
-                print!("{char} ");
+                print!("{} ", if cursor.x == x && cursor.y == y {symbol.on_yellow()} else {symbol});
             }
             println!();
         }
@@ -243,7 +237,7 @@ struct Cursor {
     y: usize,
 }
 
-const CLOSED: char = '-';
+const CLOSED: &str = "-";
 
 fn main() {
     let field_size = read_int("Please enter game field size.");
