@@ -150,7 +150,7 @@ impl Game {
                         }
                     }
                 };
-                print!("{} ", if cursor.x == x && cursor.y == y {symbol.on_yellow()} else {symbol});
+                print!("{} ", if cursor.x == x && cursor.y == y {symbol.on_bright_blue()} else {symbol});
             }
             println!();
         }
@@ -170,12 +170,14 @@ impl Game {
         let field_size = self.field_size;
         let field = &mut self.field;
         let current = &mut field[cursor.y * field_size + cursor.x];
+        let mut is_new = false;
 
         if current.mine {
             self.state = GameState::Lose;
             return;
         }
         if current.state == CellState::Closed {
+            is_new = true;
             current.state = CellState::Open;
         }
 
@@ -203,7 +205,7 @@ impl Game {
         let current = &mut field[cursor.y * field_size + cursor.x];
 
         let mut queue: Vec<(usize, usize)> = Vec::new();
-        if (current.neighbors == flags && by_user) || current.neighbors == 0 {
+        if (current.neighbors == flags && by_user && !is_new) || current.neighbors == 0 {
             for x in xmin..xmax {
                 for y in ymin..ymax {
                     if x == cursor.x && y == cursor.y
