@@ -119,15 +119,14 @@ impl Game {
         print!("{esc}[2J{esc}[1;1H", esc = 27 as char); //position the cursor at row 1, column 1:
         for y in 0..field_size {
             for x in 0..field_size {
-                let symbol :ColoredString = {
+                let symbol: ColoredString = {
                     let cell = &self.field[y * field_size + x];
                     match cell.state {
                         CellState::Closed => {
                             if cell.mine {
                                 if self.state == GameState::Lose {
                                     "*".red()
-                                }
-                                else if self.state == GameState::Win {
+                                } else if self.state == GameState::Win {
                                     "*".red().on_white()
                                 } else {
                                     CLOSED.white().clear()
@@ -139,18 +138,39 @@ impl Game {
                         CellState::Open => {
                             if cell.mine {
                                 "*".black().on_red()
-                            } else if cell.neighbors == 0 {
-                                " ".clear()
                             } else {
-                                cell.neighbors.to_string().white().clear()
+                                match cell.neighbors {
+                                    0 => " ".clear(),
+                                    1 => "1".blue(),
+                                    2 => "2".green(),
+                                    3 => "3".red(),
+                                    4 => "4".purple(),
+                                    5 => "5".truecolor(128, 0, 0),
+                                    6 => "6".truecolor(64, 224, 208),
+                                    7 => "7".black(),
+                                    8 => "8".bright_black(),
+                                    _ => "E".red(),
+                                }
+                                .on_white()
                             }
                         }
                         CellState::Flag => {
-                            "F".on_red()
+                            if self.state == GameState::Game {
+                                "F".on_red()
+                            } else {
+                                "F".red()
+                            }
                         }
                     }
                 };
-                print!("{} ", if cursor.x == x && cursor.y == y {symbol.on_bright_blue()} else {symbol});
+                print!(
+                    "{} ",
+                    if cursor.x == x && cursor.y == y {
+                        symbol.on_bright_blue()
+                    } else {
+                        symbol
+                    }
+                );
             }
             println!();
         }
