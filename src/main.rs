@@ -150,12 +150,11 @@ impl Game {
                                     7 => "7".black(),
                                     8 => "8".bright_black(),
                                     _ => "E".red(),
-                                }
-                                .on_white()
+                                }.bold()
                             }
                         }
                         CellState::Flag => {
-                            if self.state == GameState::Game {
+                            if self.state == GameState::Game && cell.mine {
                                 "F".on_red()
                             } else {
                                 "F".red()
@@ -194,6 +193,9 @@ impl Game {
 
         if current.mine {
             self.state = GameState::Lose;
+            return;
+        }
+        if current.state == CellState::Flag {
             return;
         }
         if current.state == CellState::Closed {
