@@ -38,6 +38,7 @@ struct Game {
     field: Vec<Cell>,
     field_size: usize,
     mine_count: usize,
+    flags_count: usize,
 }
 
 impl Game {
@@ -50,6 +51,7 @@ impl Game {
             field: vec![cell; field_size * field_size],
             field_size,
             mine_count,
+            flags_count: 0,
         }
     }
 
@@ -150,11 +152,15 @@ impl Game {
                                     7 => "7".black(),
                                     8 => "8".bright_black(),
                                     _ => "E".red(),
-                                }.bold()
+                                }
+                                .bold()
                             }
                         }
                         CellState::Flag => {
-                            if self.state == GameState::Game && cell.mine {
+                            if self.state == GameState::Game
+                                || self.state == GameState::Init
+                                || cell.mine
+                            {
                                 "F".on_red()
                             } else {
                                 "F".red()
@@ -173,15 +179,7 @@ impl Game {
             }
             println!();
         }
-        println!(
-            "{}",
-            mine_count
-                - self
-                    .field
-                    .iter()
-                    .filter(|c| c.state == CellState::Flag)
-                    .count()
-        );
+        println!("{}", mine_count - self.flags_count);
         //println!("{:?}", &self.field);
     }
 
@@ -302,8 +300,17 @@ fn main() {
                 Key::Char('f') => {
                     game.field[cursor.y * field_size + cursor.x].state =
                         match game.field[cursor.y * field_size + cursor.x].state {
-                            CellState::Closed => CellState::Flag,
-                            CellState::Flag => CellState::Closed,
+                            CellState::Closed => {
+                                if game.flags_count == game.mine_count {
+                                    continue;
+                                }
+                                game.flags_count += 1;
+                                CellState::Flag
+                            }
+                            CellState::Flag => {
+                                game.flags_count -= 1;
+                                CellState::Closed
+                            }
                             CellState::Open => continue,
                         };
                 }
