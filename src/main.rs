@@ -189,13 +189,15 @@ impl Game {
         let current = &mut field[cursor.y * field_size + cursor.x];
         let mut is_new = false;
 
+        if current.state == CellState::Flag {
+            return;
+        }
+
         if current.mine {
             self.state = GameState::Lose;
             return;
         }
-        if current.state == CellState::Flag {
-            return;
-        }
+
         if current.state == CellState::Closed {
             is_new = true;
             current.state = CellState::Open;
@@ -277,17 +279,16 @@ fn main() {
         if let Ok(key) = stdout.read_key() {
             println!("{key:?}");
             match key {
-                Key::Char('w') => cursor.y -= if cursor.y > 0 { 1 } else { 0 },
-                Key::Char('a') => cursor.x -= if cursor.x > 0 { 1 } else { 0 },
-                Key::Char('s') => cursor.y += if cursor.y < field_size - 1 { 1 } else { 0 },
-                Key::Char('d') => cursor.x += if cursor.x < field_size - 1 { 1 } else { 0 },
-                Key::ArrowUp => cursor.y -= if cursor.y > 0 { 1 } else { 0 },
-                Key::ArrowLeft => cursor.x -= if cursor.x > 0 { 1 } else { 0 },
-                Key::ArrowDown => cursor.y += if cursor.y < field_size - 1 { 1 } else { 0 },
-                Key::ArrowRight => cursor.x += if cursor.x < field_size - 1 { 1 } else { 0 },
-                Key::Char('q') => break 'game_loop,
-                Key::Escape => break 'game_loop,
-                Key::Char(' ') => {
+                Key::Char('w') | Key::ArrowUp => cursor.y -= if cursor.y > 0 { 1 } else { 0 },
+                Key::Char('a') | Key::ArrowLeft => cursor.x -= if cursor.x > 0 { 1 } else { 0 },
+                Key::Char('s') | Key::ArrowDown => {
+                    cursor.y += if cursor.y < field_size - 1 { 1 } else { 0 }
+                }
+                Key::Char('d') | Key::ArrowRight => {
+                    cursor.x += if cursor.x < field_size - 1 { 1 } else { 0 }
+                }
+                Key::Char('q') | Key::Escape => break 'game_loop,
+                Key::Char(' ') | Key::Enter => {
                     if game.state == GameState::Init {
                         game.gen(&cursor);
                         game.state = GameState::Game;
@@ -297,7 +298,7 @@ fn main() {
                         break 'game_loop;
                     }
                 }
-                Key::Char('f') => {
+                Key::Char('f') if game.state == GameState::Game => {
                     game.field[cursor.y * field_size + cursor.x].state =
                         match game.field[cursor.y * field_size + cursor.x].state {
                             CellState::Closed => {
