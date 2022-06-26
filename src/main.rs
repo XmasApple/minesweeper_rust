@@ -1,6 +1,7 @@
 extern crate colored;
 use colored::*;
 use console::{Key, Term};
+use easyterm::EasyTerm;
 use rand::seq::SliceRandom;
 use std::cmp;
 use std::io;
@@ -93,7 +94,7 @@ impl Game {
             let index = mines_indices[i];
             self.field[*index].mine = true;
         }
-        println!("{mines_indices:?}");
+        //println!("{mines_indices:?}");
 
         //println!("{self:?}");
         for x in 0..field_size {
@@ -114,73 +115,73 @@ impl Game {
         //io::stdin().read_line(&mut String::new());
     }
 
-    fn draw(&self, cursor: &Cursor) {
-        let field_size = self.field_size;
-        let mine_count = self.mine_count;
-
-        print!("{esc}[2J{esc}[1;1H", esc = 27 as char); //position the cursor at row 1, column 1:
-        for y in 0..field_size {
-            for x in 0..field_size {
-                let symbol: ColoredString = {
-                    let cell = &self.field[y * field_size + x];
-                    match cell.state {
-                        CellState::Closed => {
-                            if cell.mine {
-                                if self.state == GameState::Lose {
-                                    "*".red()
-                                } else if self.state == GameState::Win {
-                                    "*".red().on_white()
-                                } else {
-                                    CLOSED.white().clear()
-                                }
-                            } else {
-                                CLOSED.white().clear()
-                            }
-                        }
-                        CellState::Open => {
-                            if cell.mine {
-                                "*".black().on_red()
-                            } else {
-                                match cell.neighbors {
-                                    0 => " ".clear(),
-                                    1 => "1".blue(),
-                                    2 => "2".green(),
-                                    3 => "3".red(),
-                                    4 => "4".purple(),
-                                    5 => "5".truecolor(128, 0, 0),
-                                    6 => "6".truecolor(64, 224, 208),
-                                    7 => "7".black(),
-                                    8 => "8".bright_black(),
-                                    _ => "E".red(),
-                                }
-                                .bold()
-                            }
-                        }
-                        CellState::Flag => {
-                            if self.state == GameState::Game
-                                || self.state == GameState::Init
-                                || cell.mine
-                            {
-                                "F".on_red()
-                            } else {
-                                "F".red()
-                            }
-                        }
-                    }
-                };
-                print!(
-                    "{} ",
-                    if cursor.x == x && cursor.y == y {
-                        symbol.on_bright_blue()
-                    } else {
-                        symbol
-                    }
-                );
+    fn init_draw(&self, cursor: &Cursor) {
+        EasyTerm::set_cursor_invisible();
+        EasyTerm::clear_screen();
+        EasyTerm::set_cursor_top_left();
+        for _ in 0..self.field_size {
+            for _ in 0..self.field_size {
+                print!("{} ", CLOSED);
             }
             println!();
         }
-        println!("{}", mine_count - self.flags_count);
-        //println!("{:?}", &self.field);
+
+        self.update_cell(0, 0, &cursor);
+    }
+
+    fn update_cell(&self, x: usize, y: usize, cursor: &Cursor) {
+        let cell = &self.field[y * self.field_size + x];
+
+        let symbol = match cell.state {
+            CellState::Closed => {
+                if cell.mine {
+                    if self.state == GameState::Lose {
+                        "*".red()
+                    } else if self.state == GameState::Win {
+                        "*".red().on_white()
+                    } else {
+                        CLOSED.white().clear()
+                    }
+                } else {
+                    CLOSED.white().clear()
+                }
+            }
+            CellState::Open => {
+                if cell.mine {
+                    "*".black().on_red()
+                } else {
+                    match cell.neighbors {
+                        0 => " ".clear(),
+                        1 => "1".blue(),
+                        2 => "2".green(),
+                        3 => "3".red(),
+                        4 => "4".purple(),
+                        5 => "5".truecolor(128, 0, 0),
+                        6 => "6".truecolor(64, 224, 208),
+                        7 => "7".black(),
+                        8 => "8".bright_black(),
+                        _ => "E".red(),
+                    }
+                    .bold()
+                }
+            }
+            CellState::Flag => {
+                if self.state == GameState::Game || self.state == GameState::Init || cell.mine {
+                    "F".on_red()
+                } else {
+                    "F".red()
+                }
+            }
+        };
+        EasyTerm::print_at(
+            x * 2 + 1,
+            y + 1,
+            if cursor.x == x && cursor.y == y {
+                symbol.on_bright_blue()
+            } else {
+                symbol
+            },
+        );
     }
 
     fn open(&mut self, cursor: &Cursor, by_user: bool) {
@@ -227,7 +228,7 @@ impl Game {
         let current = &mut field[cursor.y * field_size + cursor.x];
 
         let mut queue: Vec<(usize, usize)> = Vec::new();
-        if (current.neighbors == flags && by_user && !is_new) || current.neighbors == 0 {
+        if (current.neighbors <= flags && by_user && !is_new) || current.neighbors == 0 {
             for x in xmin..xmax {
                 for y in ymin..ymax {
                     if x == cursor.x && y == cursor.y
@@ -240,6 +241,15 @@ impl Game {
                 }
             }
         }
+
+        self.update_cell(
+            cursor.x,
+            cursor.y,
+            &Cursor {
+                x: usize::MAX,
+                y: usize::MAX,
+            },
+        );
         for (x, y) in queue {
             self.open(&Cursor { x, y }, false);
         }
@@ -274,10 +284,11 @@ fn main() {
     let mut cursor: Cursor = Cursor { x: 0, y: 0 };
 
     let stdout = Term::buffered_stdout();
+    game.init_draw(&cursor);
     'game_loop: loop {
-        game.draw(&cursor);
         if let Ok(key) = stdout.read_key() {
-            println!("{key:?}");
+            //println!("{key:?}");
+            let (x, y) = (cursor.x, cursor.y);
             match key {
                 Key::Char('w') | Key::ArrowUp => cursor.y -= if cursor.y > 0 { 1 } else { 0 },
                 Key::Char('a') | Key::ArrowLeft => cursor.x -= if cursor.x > 0 { 1 } else { 0 },
@@ -317,9 +328,24 @@ fn main() {
                 }
                 _ => (),
             }
+            game.update_cell(x, y, &cursor);
+            game.update_cell(cursor.x, cursor.y, &cursor);
+            EasyTerm::print_at(
+                0,
+                game.field_size + 1,
+                format!(
+                    "{:0width$}",
+                    game.mine_count - game.flags_count,
+                    width = (game.mine_count as f64).log10() as usize + 1
+                ),
+            );
         }
     }
-    game.draw(&cursor);
+    for y in 0..field_size {
+        for x in 0..field_size {
+            game.update_cell(x, y, &cursor);
+        }
+    }
 }
 
 fn read_int(s: &str) -> usize {
